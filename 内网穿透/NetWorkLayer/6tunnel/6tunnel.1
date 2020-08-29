@@ -1,0 +1,172 @@
+.\"
+.\"  6tunnel v0.13
+.\"  (C) Copyright 2000-2005,2013,2016,2019 by Wojtek Kaniewski <wojtekka@toxygen.net>
+.\"
+.TH 6TUNNEL 1 "Oct 19, 2019"
+.SH NAME
+6tunnel \- tunnelling for application that don't speak IPv6
+.SH SYNOPSIS
+.B 6tunnel
+[
+.B \-146dhfv
+] [
+.BI \-u
+.IR username
+] [
+.BI \-i
+.IR password
+] [
+.BI \-I
+.IR password
+] [
+.BI \-l
+.IR local\_host
+] [
+.BI \-L
+.IR limit
+] [
+.BI \-p
+.IR pid\_file
+] [
+.BI \-m
+.IR map\_file
+]
+.IR local\_port
+.IR remote\_host
+[
+.IR remote\_port
+]
+.SH DESCRIPTION
+.B 6tunnel
+allows you to use services provided by IPv6 hosts with IPv4-only
+applications and vice-versa. It can bind to any of your IPv4 (default) or
+IPv6 addresses and forward all data to IPv4 or IPv6 (default) host. For
+example
+.IP
+.BI 6tunnel "\ " \-1 "\ " 6668 "\ " irc6.net "\ " 6667
+.LP
+will be enough to connect to IPv6 irc server with
+.IP
+.BI irc "\ " foobar "\ " localhost:6668
+.LP
+If you don't wish to run
+.B 6tunnel
+every time you want to show your :c001: or :dead: IPv6 address on IRC,
+you can use
+.B \-i
+parameter, which makes
+.B 6tunnel
+ask your client for specified password. Just run
+.IP
+.BI 6tunnel "\ " \-i "\ " dupa.8 "\ " 31337 "\ " irc6.net "\ " 6667
+.LP
+and then type
+.IP
+.BI irc "\ " foobar "\ " localhost:31337:dupa.8
+.LP
+If your IRC server requires you to send password, specify it with
+.B \-I
+parameter -- after successful proxy authentication
+.B 6tunnel
+will send it to the server.
+
+.B 6tunnel
+can also be used as a tunnel for all other combinations of IPv4 and IPv6
+endpoints. If remote host doesn't have any IPv6 addresses,
+.B 6tunnel
+will use the IPv4 one. In other cases, use
+.B \-4
+parameter which makes IPv4 address the preferred one. For IPv6-to-any tunnels
+use
+.B \-6
+which makes
+.B 6tunnel
+bind to IPv6 address.
+.SH OPTIONS
+.TP
+.B \-1
+Exit after first connection.
+.TP
+.B \-4
+Prefer IPv4 endpoint if the machine has both address types.
+.TP
+.B \-6
+Listen on IPv6 address (IPv4 is default).
+.TP
+.B \-d
+Don't detach.
+.TP
+.B \-f
+Force tunneling even if remote host is not resolvable at the execution time.
+.TP
+.B \-h
+Print hex dump of every packet received or sent.
+.TP
+.BI \-u "\ " username
+Change UID and GID after bind().
+.TP
+.BI \-i "\ " password
+Act as an IRC proxy and require user to authenticate.
+.TP
+.BI \-I "\ " password
+If you are using
+.B 6tunnel
+as an IRC proxy and the IRC server requires you to send password, place
+it right here.
+.TP
+.BI \-l "\ " local_host
+Listen on specified address (IPv4, or IPv6 if
+.B \-6
+used).
+.TP
+.BI \-L "\ " limit
+Limit simultaneous connections.
+.TP
+.BI \-p "\ " pid_file
+Write down pid to specified file.
+.TP
+.BI \-s "\ " source_host
+Connect to the remote host using specified source address.
+.TP
+.BI \-m "\ " map_file
+Binds to specified IPv6 addresses on basis of source IPv4 address. The file
+contains one mapping per line with IPv4 source address and corresponding IPv6
+address. Only listed hosts are allowed to connect. If you want to allow any
+host, add mapping for
+.BI default
+or
+.BI 0.0.0.0
+address. Example:
+.IP
+.nf
+.ta +3i
+192.168.0.2 3ffe:8010:18::1000:2
+192.168.0.3 3ffe:8010:18::1000:3
+.fi
+.TP
+.B \-v
+Be verbose and don't detach.
+.SH NOTES
+Option
+.B \-H
+to disable all resolver hints has been removed since proper combination
+of 
+.B \-4
+and
+.B \-6
+will yield in any combination of IPv4 and IPv6 sources and destinations.
+.SH SIGNALS
+Sending SIGHUP forces map file reload.
+.SH THANKS
+#ipv6 crew, Lam.
+.SH BUGS
+Terrible man page. Hex dump doesn't include IRC proxy authentication.
+IRC proxy requires your client to send password first (don't worry ircii,
+EPIC, BitchX, mIRC and many more will work). No logging except debug output.
+.SH AUTHORS
+Wojtek Kaniewski (wojtekka@toxygen.net),
+Dariusz Jackowski (ascent@linux.pl),
+Ramunas Lukosevicus (lukoramu@parok.lt),
+Roland Stigge (stigge@antcom.de)
+.SH "SEE ALSO"
+.BR ssh (1)
