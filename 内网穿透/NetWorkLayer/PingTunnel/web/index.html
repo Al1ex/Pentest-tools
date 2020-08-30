@@ -1,0 +1,266 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+<title>Ping Tunnel - Send TCP traffic over ICMP</title>
+</head>
+<body>
+<TABLE BORDER=0 BGCOLOR="#999999" CELLSPACING=0 CELLPADDING=5 WIDTH="100%">
+<TR><TD BGCOLOR="#EEEEEE" VALIGN=TOP WIDTH="100%" COLSPAN=2>
+<h1>Ping Tunnel</h1>
+<h4>For those times when everything else is blocked.</h4>
+<h5>By Daniel St&oslash;dle, daniels@cs.uit.no</h5>
+<h5><i>Last updated: 5. September 2011</i></h5>
+<hr>
+<h3>Contents</h3>
+<ul>
+<li><a href="#what">What is it?</a></li>
+<li><a href="#features">Features and requirements</a></li>
+<li><a href="#features">How it works</a></li>
+<li><a href="#download">Download</a></li>
+<li><a href="#using">Using ptunnel</a></li>
+<li><a href="#changes">Changes</a></li>
+<li><a href="#license">License</a></li>
+</ul>
+<hr>
+
+<a name="what"><h3>What is it?</h3></a>
+Ptunnel is an application that allows you to reliably tunnel TCP connections to a remote host using ICMP echo request and reply packets, commonly known as ping requests and replies. At first glance, this might seem like a rather useless thing to do, but it can actually come in handy in some cases. The following example illustrates the main motivation in creating ptunnel:<p>
+
+Setting: You're on the go, and stumble across an open wireless network. The network gives you an IP address, but won't let you send TCP or UDP packets out to the rest of the internet, for instance to check your mail. What to do? By chance, you discover that the network will allow you to ping any computer on the rest of the internet. With ptunnel, you can utilize this feature to check your mail, or do other things that require TCP.<p>
+
+<a name="features"><h3>Features and requirements</h3></a>
+Ptunnel is not a feature-rich tool by any means, but it does what it advertises. So here is what it can do:<p>
+<ul><li>Tunnel TCP using ICMP echo request and reply packets</li>
+<li>Connections are reliable (lost packets are resent as necessary)</li>
+<li>Handles multiple connections</li>
+<li>Acceptable bandwidth (150 kb/s downstream and about 50 kb/s upstream are the currently measured maximas for one tunnel, but with tweaking this can be improved further)</li>
+<li>Authentication, to prevent just anyone from using your proxy</li>
+</ul>
+
+So what do you need for all this to work?<p>
+
+<ul><li>One computer accessible on the internet that is <i>not</i> firewalled (or at least allows incoming ICMP packets)</li>
+<li>A computer to act as the client (this will usually be your laptop, on the go..)</li>
+<li>Root access, preferably on both computers</li>
+<li>A posix-compliant OS, with libpcap (for packet capturing) and its associated  headers installed (typically available in a dev-package on Ubuntu)</li>
+<li>Or: Windows with mingw and WinPcap installed</li>
+</ul>
+
+Compiling the sources simply consists of running make. No ./configure, make, make install, just make. On Windows, you'll need to run make ptunnel.exe, but that's it. The resulting binary is called <b>ptunnel</b>. See the usage section below for info on running it.
+
+</TD></TR>
+<TR><TD BGCOLOR="#EEEEEE" VALIGN=TOP WIDTH="*">
+<a name="how"><h3>How it works</h3></a>
+
+This is a technical description of how ptunnel works. If you're not interested in low-level networking details, you can skip this section. It might help to read it either way, as it provides some insights into the situations where ptunnel <i>doesn't</i> work.
+
+Ptunnel works by tunneling TCP connections over ICMP packets. In the following, we will talk about the <b>proxy,</b> the <b>client</b> and the <b>destination</b>. The proxy is the &quot;endpoint&quot; for our ping packets, i.e. the computer that we send the ping packets to. The client is the computer we're trying to surf the net from, and the destination is the computer we would normally be trying to access over TCP (such as a web site or an ssh server somewhere).<p>
+
+So, in order to accomplish this, we need the ability to send and receive ping packets. Many operating systems enable us to do this using so-called raw sockets. Raw sockets is the preferred mechanism for sending ICMP packets, and is used by both the proxy and the client. Unfortunately, raw sockets require root, so there is a provision for using standard datagram sockets if they are supported by the operating system (Mac OS X 10.2 or later supports this, but Linux systems will require root either way). Ptunnel supports this, however it is not recommended for actual use. We'll get back to the reason later.<p>
+
+The client will perform all its communications using ICMP echo request (ping) packets (type 8), whereas the proxy will use echo reply packets (type 0). In theory, it is possible to have the proxy also use echo request packets (and thus make it operate without root), but these packets are not necessarily forwarded to the client beyond the host network, so they are not used.
+</TD>
+<TD BGCOLOR="#EEEEEE" VALIGN=CENTER WIDTH="*">
+<IMG SRC="setup.png" ALT="Machine setup"><br>
+<center>Figure 1. Networking setup.</center>
+</TD></TR>
+
+<TR><TD BGCOLOR="#EEEEEE" VALIGN=TOP WIDTH="100%" COLSPAN=1>
+<h4>The protocol</h4>
+The proxy protocol uses four different message types combined with sequence numbers and an acknowledgement field. A magic number is used to differentiate our ping requests and replies from &quot;usual&quot; pings. The general packet format (not including the IP or ICMP headers) can be seen in the figure below.<p>
+
+<center><IMG SRC="packet-format.png" ALT="Packet format"><br>
+Figure 2. The packet format used to exchange messages between client and proxy.</center><p>
+
+The IP and port fields are only used in packets from the client to the proxy. They indicate where the client wants the received packets to be forwarded (they are really only used once - when the proxy receives the first message with state code <tt>kProxy_start</tt>).<p>
+</TD>
+<TD BGCOLOR="#EEEEEE" ALIGN=RIGHT VALIGN=CENTER WIDTH="100%" COLSPAN=1>
+State codes:<br>
+<tt>kProxy_start = 0;<br>
+kProto_data = 1;<br>
+kProto_ack = 2;<br>
+kProto_close = 3;<br>
+kProto_authenticate = 4;<br>
+</tt><p>
+
+Identifier flags:<br>
+<tt>kUser_flag = 1 &lt;&lt; 30;<br>
+kProxy_flag	= 1 &lt;&lt; 31;<br>
+</tt>
+</TD></TR>
+
+<TR><TD BGCOLOR="#EEEEEE" VALIGN=TOP WIDTH="100%" COLSPAN=2>
+The state code serves a dual purpose. First, it indicates what kind of message is being received - either a message starting a new proxy session (<tt>kProxy_start</tt>), a message containing data to be forwarded (<tt>kProto_data</tt>), an explicit acknowledgement of received packets (<tt>kProto_ack</tt>, a close message (<tt>kProto_close</tt>) or an authentication challenge/response (<tt>kProto_authenticate</tt>). Second, it indicates who sent the message: A message sent by the client will have the <tt>kUser_flag</tt> bit set, whereas a message sent by the proxy has the <tt>kProxy_flag</tt> bit set. This is necessary since a ping request will cause the operating system on the proxy computer to return its own echo reply, which is identical to the packet we just sent to the proxy.
+
+The ack and seq fields are tightly related. Modelled after the use of acknowledgements in TCP, the ptunnel protocol places the sequence number of the last packet received into the ack field of any outgoing message. The seq field is a monotonically increasing 16-bit counter, that is allowed to wrap around (ok, so I guess it's monotonic <i>until</i> it wraps around). Whenever an outgoing packet has been waiting for an acknowledgement too long, the peer will attempt to resend the first packet not yet acknowledged.<p>
+
+The length field simply indicates the length of the data portion of the packet, and is 0 for all other state values than <tt>kProto_data</tt>. Finally the rsv field contains two bytes that are reserved (for now they serve as padding).<p>
+
+On receiving a <tt>kProxy_start</tt> request, a proxy will open a TCP connection to the server given by the ip and port fields. As data comes in over the TCP connection, the proxy will convert the data to ICMP echo reply packets, and send them to the remote peer. The client will do the same, except its packets will always be echo request packets.<p>
+
+<h4>Authentication</h4>
+As of version 0.60, Ping Tunnel supports authentication. The authentication used is very simple, and works as follows. The user first specifies a password or passphrase, which is then hashed using the MD5 algorithm (Ping Tunnel uses the implementation by L. Peter Deutsch, available <a href="http://sourceforge.net/projects/libmd5-rfc/">here</a>. Note that the implementation is included with Ping Tunnel, so there is no need to download it separately).<p>
+
+Whenever a proxy receives a request for a new tunnel, it will respond with an authentication challenge. The challenge consists of a timestamp augmented with random data, totalling 32 bytes. The response is calculated as follows (the + denotes string concatenation):<p>
+
+<tt>md5(challenge + md5(password))</tt><p>
+
+The proxy verifies the result by computing the same md5 sums, and then comparing the two. If authentication succeeds, the proxy allows TCP traffic to start flowing in either direction; if not, the connection is torn down.<p>
+
+<h4>Handling multiple connections</h4>
+The proxy handles multiple different connections by using the ICMP identifier field. A client will randomly generate an identifier when it starts a session, and the remote peer will use this identifier to associate the packets with a connection. The mechanism is not foolproof, but works acceptably as long as no two instances attempt to use the same identifier (there is currently no mechanism for reporting such errors).<p>
+
+The ICMP sequence number field is not used by ptunnel, mostly due to fears that some routers might drop packets whose sequence number repeats. Instead, a separate sequence number is used as part of the ptunnel packet format (see above).<p>
+
+<h4>Send and receive windows</h4>
+Ptunnel uses the simple concept of send and receive windows for controlling the number of packets that can be in-flight at the same time. The window is currently statically allocated at 64 packets, but the number can be tweaked by modifying the ptunnel header file (yes, a recompile is required). Increasing the window size will improve the maximum potential bandwidth.
+
+The send and receive windows are simply implemented as a set of circular arrays, with pointers indicating the next available send/receive slot, and the first non-acked packet.
+
+<h4>Handling packet loss</h4>
+Ptunnel handles packet loss by resending (presumably) lost packets. As it sends packets, it will increment a sequence number. Both the client and proxy maintain their own sequence number, and also a number indicating the last sequence number acknowledged by the remote peer. Whenever too much time (1.5 seconds) passes without a packet being acknowledged, the peer will resend that packet.<p>
+
+Note that the peer will <i>only</i> resend the first missing packet. Once that packet has been acknowledged, it <i>may</i> resend the next packet(s), depending on how many packets were acknowledged. If the next few packets are acknowlegded as well, they are removed from the send queue. It is not uncommon for one packet to get lost, with most of the others making it through. This mechanism avoids unecessary resends as much as possible.<p>
+
+<h4>Congestion control</h4>
+Ptunnel currently does no explicit congestion control. It will send as many ping packets as the window size allows, as slowly or as quickly as it sees fit. This might be improved in the future, if it turns out to be a problem (which is not at all unlikely..).
+
+<h4>When things don't work</h4>
+There are a number of situations where ptunnel will fail. They can briefly be put into the following categories:<br>
+<ol><li>Outgoing/incoming ping not allowed, or filtered by a gateway somewhere along the way
+<li>Operating system causing trouble
+<lI>Probably some other failures as well ;)
+</ol><p>
+
+We can't handle the first failure - if our packets are filtered before we can get at them, there's little we can do. It is possible to deal with the second scenario by using the packet capturing library to get the packets before the OS sees them. This is necessary on Mac OS X, and may be necessary on other platforms as well. The problem lies in that the OS may occasionally not deliver ICMP packets to the raw socket we have opened for sending and receiving. This happens when the ICMP packet is an echo request (which the OS handles by itself) or when the ICMP packet is a resend (for some weird reason). The workaround is to use packet capture, however this tends to diminish bandwidth by quite a bit. For this reason, you should always try to run the proxy without packet capturing, and see if that works first. (This is the default mode.)
+</TD></TR>
+
+
+<TR><TD BGCOLOR="#EEEEEE" VALIGN=TOP WIDTH="100%" COLSPAN=2>
+<a name="download"><h3>Download</h3></a>
+<p>The current version of ptunnel is 0.71, and the source code is available for download <a href="PingTunnel-0.71.tar.gz"><u>here</u></a>. Some other links:</p>
+
+<ul>
+<li><u><a href="http://freshmeat.net/projects/ptunnel/">Freshmeat project page</a></u></li>
+<li>RPMs for different platforms: <a href="http://dries.studentenweb.org/apt/packages/ptunnel/info.html"><u>http://dries.studentenweb.org/apt/packages/ptunnel/info.html</u></a> and 
+<a href="http://dag.wieers.com/packages/ptunnel/"><u>http://dag.wieers.com/packages/ptunnel/</u></a></li>
+<li>SPARC/x86 Solaris 2.5-10 packages: <a href="http://sunfreeware.com">http://sunfreeware.com</a></li>
+<li><a href="ptunnel-0.71-iphone.tar.gz">iPhone version</a> (requires a jailbroken iPhone/iPod touch running iPhone OS 3.0 or later with libpcap installed through Cydia), by Rudolf Spring. (Added 29. January 2010)</li></ul>
+
+<p>Ptunnel has so far been tested on a variety of configurations, including Linux Fedora Core 2 and Mac OS X 10.3.6 and above.</p>
+
+Debian users can install Ping Tunnel by adding the following to <tt>/etc/apt/sources.list</tt><p>
+
+<tt>deb http://www.cti.ecp.fr/~beauxir5/debian binary/<br>
+deb-src http://www.cti.ecp.fr/~beauxir5/debian source/</tt><p>
+
+And then run <tt>apt-get update</tt> followed by <tt>apt-get install ptunnel</tt>. A big thanks to Romain Beauxis for taking the time to create a Debian package for ptunnel!<p>
+
+As of version 0.70, ptunnel has support for Windows built-in, thanks to Mike Miller. You will need <a href="http://www.mingw.org/">mingw</a> and <a href="http://www.winpcap.org/">WinPcap</a> <a href="http://www.winpcap.org/install/bin/WpdPack_4_0_2.zip">(download here)</a> installed to compile on Windows. Please note that I don't use Windows, so I can not provide support for compilation-specific issues regarding the Windows port. Wouter van der Veer has been kind enough to provide a compiled Windows binary on his website, which you can <a href="http://vps.galway.nl/ptunnel/ptunnel.exe">download here</a>.<p>
+</TD></TR>
+
+<TR><TD BGCOLOR="#EEEEEE" VALIGN=TOP WIDTH="100%" COLSPAN=2>
+<a name="using"><h3>Using ptunnel</h3></a>
+<tt><b>Client:</b> ./ptunnel -p &lt;proxy address&gt; -lp &lt;listen port&gt; -da &lt;destination address&gt; -dp &lt;destination port&gt; [-c &lt;network device&gt;] [-v &lt;verbosity&gt;] [-f &lt;logfile&gt;] [-u] [-x password]<br>
+<b>Proxy:</b> ./ptunnel [-c &lt;network device&gt;] [-v &lt;verbosity&gt;] [-f &lt;logfile&gt;] [-u] [-x password]</tt><p>
+
+The <tt>-p</tt> switch sets the address of the host on which the proxy is running. A quick test to see if the proxy will work is simply to try pinging this host - if you get replies, you should be able to make the tunnel work.<p>
+
+The <tt>-lp</tt>, <tt>-da</tt> and <tt>-dp</tt> switches set the local listening port, destination address and destination port. For instance, to tunnel ssh connections from the client machine via a proxy running on proxy.pingtunnel.com to the computer login.domain.com, the following command line would be used:<p>
+
+<tt>sudo ./ptunnel -p proxy.pingtunnel.com -lp 8000 -da login.domain.com -dp 22</tt><p>
+
+An ssh connection to login.domain.com can now be established as follows:<p>
+
+<tt>ssh -p 8000 localhost</tt><p>
+
+If ssh complains about potential man-in-the-middle attacks, simply remove the offending key from the <tt>known_hosts</tt> file. The warning/error is expected if you have previously ssh'd to your local computer (i.e., <tt>ssh localhost</tt>), or you have used ptunnel to forward ssh connections to different hosts.<p>
+
+Of course, for all of this to work, you need to start the proxy on your proxy-computer (we'll call it proxy.pingtunnel.com here). Doing this is <i>very</i> simple:<p>
+
+<tt>sudo ./ptunnel</tt><p>
+
+If you find that the proxy isn't working, you will need to enable packet capturing on the main network device. Currently this device is assumed to be an ethernet-device (i.e., ethernet or wireless). Packet capturing is enabled by giving the <tt>-c</tt> switch, and supplying the device name to capture packets on (for instance <tt>eth0</tt> or <tt>en1</tt>). The same goes for the client. On versions of Mac OS X prior to 10.4 (Tiger), packet capturing must always be enabled (both for proxy and client), as resent packets won't be received otherwise.<p>
+
+To protect yourself from others using your proxy, you can protect access to it with a password using the <tt>-x</tt> switch. The password is never sent in the clear, but keep in mind that it may be visible from tools like top or ps, which can display the command line used to start an application.<p>
+
+Finally, the <tt>-u</tt> switch will attempt to run the proxy in unprivileged mode (i.e., no need for root access), and the <tt>-v</tt> switch controls the amount of output from ptunnel. -1 indicates no output, 0 shows errors only, 1 shows info messages, 2 gives more output, 3 provides <i>even more</i> output, level 4 displays debug info and level 5 displays absolutely everything, including the nasty details of sends and
+receives. The <tt>-f</tt> switch allows output to be saved to a logfile.<p>
+
+<a name="changes"><h3>Changes</h3></a>
+0.72 - 5. September 2011<br>
+<ul><li>Fixes an authentication bug that would manifest as hung connections with protocols that send data from the client-side before receiving data from the server-side. Thanks to StalkR for locating the bug and fixing it.</li>
+<li>Fixes a crash when attempting to enable packet-capture for non-existing network devices. Thanks to Steffen Wendzel for the patch.</li></ul><p>
+
+0.71 - 22. June 2009<br>
+<ul><li>Added security features and SELinux support, courtesy of Sebastien Raveau.</li></ul><p>
+
+
+0.70 - 12. January 2009<br>
+<ul><li>Added rudimentary support for tunneling over UDP port 53. This may or may not be useful.</li>
+<li>Added built-in support for compiling on Windows, thanks to Mike Miller.</li>
+<li>Added syslog support, also courtesy of Mike Miller.</li>
+<li>Experimental support for spoofing the source IP address. The source address must be explicitly configured in the source code, and it might not work (which is why it's experimental). To enable, define kPT_add_iphdr to 1.</li></ul><p>
+
+0.62 - <i>Never released</i><br>
+<ul><li>Added many comments to the ptunnel header file.</li>
+<li>Moved most include directives to the header file.</li>
+<li>Fixed crash if proxy or destination hostnames could not be looked up.</li></ul><p>
+
+0.61 - 26. May 2005<br>
+<ul><li>Noted that ptunnel now works without packet capturing on Mac OS X 10.4 Tiger.</li>
+<li>Log files are now opened in append-mode (i.e., not truncated).</li>
+<li>Fixed a bug that could cause ptunnel to crash if passwords shorter than 16 characters were used (the overwhelming majority of passwords, most likely!).</li></ul><p>
+
+0.60 - 15. Apr 2005<br>
+<ul><li>Added authentication support, changing parts of the ptunnel protocol.</li>
+<li>Added a manpage.</li>
+<li>Added MD5 implementation by L. Peter Deutsch for authentication.</li>
+<li>Moved declaration of a variable to allow ptunnel to compile cleanly on gcc 2.95 - thanks Choong!</li>
+<li>Added error handling for proxy connections.</li>
+<li>Fixed a problem with printing send/recv info. All verbosity levels should work now.</li>
+<li>Updated contact info.</li></ul><p>
+
+0.55 - 18. Feb 2005<br>
+<ul><li>Fixed a locking bug that would manifest itself when the maximum connection count on the proxy was reached.</li>
+<li>Fixed ptunnel to compile correctly on 64-bit architectures (thanks to &Aring;smund Grammeltvedt for pointing out the necessary changes!)</li>
+<li>Added a new logging level (level 5). Level 4 no longer outputs send and receive info; for this info level 5 is necessary.</li>
+<li>When libpcap is in use, the interface is no longer put in promiscous mode. This has never been necessary, and also makes it impossible to use ptunnel with more than one client on the same network.</li>
+<li>Discovered a problem with pcap that would cause ptunnel to hang when pcap was in use. This problem has not been resolved; the workaround is to simply re-execute the client, or disable pcap if possible.</li>
+<li>Added support for specifying a log file on the command line, using the -f switch.</li></ul><p>
+
+0.54 - 1. Feb 2005<br>
+<ul><li>Fixed a byte-order bug (thanks Alfred!)</li></ul><p>
+
+0.53 - 31. Jan 2005<br>
+<ul><li>Fixed a threading bug, and implemented support for limiting the maximum number of tunnels.</li></ul><p>
+
+Thanks to Alfred Young for reporting and fixing the following bugs:<br>
+<ul><li>Fixed a bug with packets captured via libpcap, where the struct sockaddr wasn't properly zeroed.</li>
+<li>Fixed a byte order bug in create_and_insert_proxy_desc.</li>
+<li>Fixed a memory leak in remove_proxy_desc.</li></ul><p>
+
+0.52 - 3. Jan 2005<br>
+<ul><li>Fixed a problem introduced by the ICMP ID field changes. The proxy didn't retain the ID of the packets received from clients, resulting in dropped ICMP packets at the router. This in turn lead to the tunnel no longer working, depending on the strictness of the router. This version fixes that problem.
+<li>Makefile is better now, thanks to Dries Verachtert.
+</ul><p>
+
+0.51 - 2. Jan 2005<br>
+<ul><li>Fixed incorrect checksum calculation for resent packets.
+<li>Stopped relying on the ICMP packet's "built-in" ID field, and moved the information to the data portion of the packet.
+<li>Changed default verbosity level from debug to verbose.
+</ul><p>
+
+0.50 - 7. Dec 2004<br>
+Initial public release.
+
+
+<a name="license"><h3>License</h3></a>
+Ptunnel is licensed under the BSD license.<p>
+
+<h3>Feedback</h3>
+I'd be grateful for any feedback you may have - send it to me here: daniels@cs.uit.no. I'm interested in hearing about bugs, suggestions and naturally general criticism. If you find it useful, I'd love to know about that too :)<p>
+</TD></TR>
+</TABLE>
+</body>
+</html>

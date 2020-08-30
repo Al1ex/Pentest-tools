@@ -1,0 +1,22 @@
+policy_module(ptunnel, 1.7)
+
+require {
+	type initrc_t;
+	type unconfined_t;
+	type unlabeled_t;
+	class tcp_socket { read write create connect };
+	class association recvfrom;
+	class rawip_socket { write read };
+}
+
+type ptunnel_t;
+domain_dyntrans_type(initrc_t)
+
+allow ptunnel_t self:tcp_socket { read write create connect };
+allow ptunnel_t unconfined_t:rawip_socket { write read };
+allow ptunnel_t unlabeled_t:association recvfrom;
+corenet_tcp_sendrecv_generic_if(ptunnel_t)
+corenet_tcp_sendrecv_ssh_port(ptunnel_t)
+corenet_raw_receive_generic_node(ptunnel_t)
+corenet_tcp_connect_ssh_port(ptunnel_t)
+corenet_tcp_sendrecv_lo_node(ptunnel_t)

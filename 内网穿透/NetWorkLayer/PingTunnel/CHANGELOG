@@ -1,0 +1,94 @@
+PingTunnel Changelog
+====================
+
+0.72 - 5. September 2011
+- Fixes an authentication bug that would manifest as hung connections with
+  protocols that send data from the client-side before receiving data from
+  the server-side. Thanks to StalkR for locating the bug and fixing it.
+- Fixes a crash when attempting to enable packet-capture for non-existing
+  network devices. Thanks to Steffen Wendzel for the patch.
+
+0.71 - 22. June 2009
+- Added security features and SELinux support, courtesy of Sebastien Raveau.
+
+0.70 - 12. January 2009
+- Added rudimentary support for tunneling over udp port 53.
+- Added built-in support for compiling on Windows, thanks to Mike Miller.
+- Added syslog support, also courtesy of Mike Miller.
+- Experimental support for spoofing the source IP address. The source
+  address must be explicitly configured in the source code, and it might
+  not work (which is why it's experimental). To enable, define
+  kPT_add_iphdr to 1.
+
+0.62 - [Never released]
+- Added many comments to the ptunnel header file. 
+- Moved most include directives to the header file.
+- Fixed crash if proxy or destination hostnames could not be looked up.
+
+0.61 - 26. May 2005
+- Noted that ptunnel now works without packet capturing on Mac OS X 10.4
+  Tiger.
+- Log files are now opened in append-mode (i.e., not truncated).
+- Fixed a bug that could cause ptunnel to crash if passwords shorter than
+  16 characters were used (the overwhelming majority of passwords, most
+  likely!).
+
+0.60 - 15. Apr 2005
+- Added authentication support, changing parts of the ptunnel protocol.
+- Added a manpage.
+- Added MD5 implementation by L. Peter Deutsch for authentication.
+- Moved declaration of a variable to allow ptunnel to compile cleanly
+  on gcc 2.95 - thanks Choong!
+- Added error handling for proxy connections.
+- Fixed a problem with printing send/recv info. All verbosity levels
+  should work now.
+- Updated contact info.
+
+0.55 - 18. Feb 2005
+- Fixed a locking bug that would manifest itself when the maximum
+  connection count on the proxy was reached.
+- Fixed ptunnel to compile correctly on 64-bit architectures (thanks
+  to Åsmund Grammeltvedt for pointing out the necessary changes!)
+- Added a new logging level (level 5). Level 4 no longer outputs send
+  and receive info; for this info level 5 is necessary.
+- When libpcap is in use, the interface is no longer put in promiscous
+  mode. This has never been necessary, and also makes it impossible to
+  use ptunnel with more than one client on the same network.
+- Discovered a problem with pcap that would cause ptunnel to hang when
+  pcap was in use. This problem has not been resolved; the workaround is
+  to simply re-execute the client, or disable pcap if possible.
+- Added support for specifying a log file on the command line, using
+  the -f switch.
+
+0.54 - 1. Feb 2005
+- Fixed a byte-order bug (thanks Alfred!)
+
+0.53 - 31. Jan 2005
+- Fixed a threading bug, and implemented support for limiting the
+  maximum number of tunnels.
+
+Thanks to Alfred Young for reporting and fixing the following bugs:
+- Fixed a bug with packets captured via libpcap, where the struct
+  sockaddr wasn't properly zeroed.
+- Fixed a byte order bug in create_and_insert_proxy_desc.
+- Fixed a memory leak in remove_proxy_desc.
+
+
+0.52 - 3. Jan 2005
+- Fixed a problem introduced by the ICMP ID field changes. The 
+  proxy didn't retain the ID of the packets received from clients,
+  resulting in dropped ICMP packets at the router. This in turn
+  lead to the tunnel no longer working, depending on the strictness
+  of the router. This version fixes that problem.
+- Makefile is better now, thanks to Dries Verachtert.
+
+
+0.51 - 2. Jan 2005
+- Fixed incorrect checksum calculation for resent packets.
+- Stopped relying on the ICMP packet's "built-in" ID field,
+  and moved the information to the data portion of the packet.
+- Changed default verbosity level from debug to verbose.
+
+
+0.50 - 7. Dec 2004
+Initial public release.

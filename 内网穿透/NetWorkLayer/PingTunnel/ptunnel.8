@@ -1,0 +1,123 @@
+.TH ptunnel 8  "September 5, 2011" "Version 0.72" "Yellow Lemon Software"
+.SH NAME
+ptunnel \- tunnel TCP connections over ICMP echo request/reply packets.
+.SH SYNOPSIS
+.B ptunnel
+\-p proxy_address \-lp listen_port \-da destination_address \-dp dest_port [\-c network_device] [\-v verbosity] [-f file] [-udp] [-syslog]
+
+.B ptunnel
+[\-c network_device] [\-v verbosity] [\-f file] [\-udp] [\-syslog] [\-daemon file]
+
+.B ptunnel
+[\-u] [\-x password] [\-setuid user] [\-setgid group] [\-chroot dir] [\-setcon context]
+
+.B ptunnel
+\-h
+.SH DESCRIPTION
+ptunnel is an application that allows you to reliably tunnel TCP connections to a remote host using ICMP echo request and reply packets, commonly known as ping requests and replies. At first glance, this might seem like a rather useless thing to do, but it can actually come in handy in some cases. The following example illustrates the main motivation in creating ptunnel:
+.PP
+Setting: You're on the go, and stumble across an open wireless network. The network gives you an IP address, but won't let you send TCP or UDP packets out to the rest of the internet, for instance to check your mail. What to do? By chance, you discover that the network will allow you to ping any computer on the rest of the internet. With ptunnel, you can utilize this feature to check your mail, or do other things that require TCP.
+.SH OPTIONS
+.TP
+.SH Client options:
+.TP
+.B \-p proxy_address
+Specify the host on which the proxy is running.
+.TP
+.B \-lp listen_port
+Specifies the port on which the client will listen for incoming TCP connections.
+.TP
+.B \-da destination_addr
+Specifies the address to which you want your packets tunneled after reaching the proxy when in client mode, or restricts the destination packets can be forwarded to when in server mode.
+.TP
+.B \-dp destination_port
+Specifies/restrict the port that the proxy should tunnel the TCP connection to.
+.TP
+.SH Shared options:
+.TP
+.B \-c network_device
+Specify the network interface to capture packets from. Note that packet capturing isn't always necessary, but you should try this if you experience problems with ptunnel.
+.TP
+.B \-v verbosity
+Controls the verbosity level. -1 is no output, 0 shows errors only, 1 shows info messages, 2 gives more output, 3 provides even more output, level 4 displays debug info and level 5 displays absolutely everything, including the nasty details of sends and receives.
+.TP
+.B \-udp
+Enables tunneling over UDP port 53 (DNS) instead of using ICMP. This will only work if your proxy can accept incoming traffic on port 53, and the client is able to send data to the proxy on port 53. Note that this option does not wrap ptunnel's data in DNS-compliant packets. This option must be given on both the proxy and client side for things to work correctly.
+.TP
+.B \-syslog (Not available on Windows.)
+Changes logging to use the built-in syslog fascility.
+.TP
+.B \-daemon file (Not available on Windows.)
+Run in background, writing PID in file.
+.TP
+.B \-u
+Attempts to run ptunnel without privileges. This doesn't usually work! On UNIX systems please consider using the following three options instead:
+.TP
+.B \-setuid user (Not available on Windows.)
+When started in privileged mode, drop down to user's rights as soon as possible.
+.TP
+.B \-setgid group (Not available on Windows.)
+When started in privileged mode, drop down to group's rights as soon as possible.
+.TP
+.B \-chroot dir (Not available on Windows.)
+When started in privileged mode, restrict file access to the specified directory.
+.TP
+.B \-setcon context (Not available on Windows.)
+Set SELinux context when all there is left to do are network I/O operations.
+In order to be able to combine with -chroot you will have to `mount --bind /proc /chrootdir/proc`
+.TP
+.B \-x password
+Specifies a password or passphrase to use. This will allow you to protect the proxy from use by others who don't know the password. It needs to be specified on both proxy and client.
+.TP
+.B \-f file
+Specifies a log file. If you specify -syslog, syslog is always used instead.
+.TP
+.B \-h
+Displays brief usage information.
+
+.SH EXAMPLES
+The following assumes that ptunnel is run as root, both on the proxy and client. To tunnel ssh connections from the client machine via a proxy running on proxy.pingtunnel.com to the computer login.domain.com, the following command line would be used:
+.TP
+.B ptunnel \-p proxy.pingtunnel.com \-lp 8000 \-da login.domain.com \-dp 22
+.PP
+An ssh connection to login.domain.com can now be established as follows:
+.TP
+.B ssh \-p 8000 localhost
+.PP
+If ssh complains about potential man-in-the-middle attacks, simply remove the offending key from the known_hosts file. The warning/error is expected if you have previously ssh'd to your local computer (i.e., ssh localhost), or you have used ptunnel to forward ssh connections to different hosts.
+
+Of course, for all of this to work, you need to start the proxy on your proxy-computer (proxy.pingtunnel.com). Doing this is very simple:
+
+.B ptunnel
+
+If you find that the proxy isn't working, you will need to enable packet capturing on the main network device. Currently this device is assumed to be an ethernet-device (i.e., ethernet or wireless). Packet capturing is enabled by giving the -c switch, and supplying the device name to capture packets on (for instance eth0 or en1). The same goes for the client. On Mac OS X, packet capturing must always be enabled (both for proxy and client), as resent packets won't be received otherwise.
+
+To protect yourself from others using your proxy, you can protect access to it with a password using the <tt>-x</tt> switch. The password is never sent in the clear, but keep in mind that it may be visible from tools like top or ps, which can display the command line used to start an application.
+
+.SH EXIT STATUS
+.B ptunnel
+does not exit until forced to do so by an interrupt (Ctrl-C) or if it crashes.
+.SH BUGS
+.B ptunnel
+currently does not handle packet capturing on network interfaces other than ethernet or wireless correctly.
+.SH AUTHORS AND CONTRIBUTORS
+Daniel Stoedle (daniels@cs.uit.no)
+
+Windows port: Mike Miller (mike@mikeage.net)
+
+SELinux support: Sebastien Raveau (sebastien.raveau@epita.fr)
+
+Patches: Joe McKenzie, Steffen Wendzel and StalkR.
+
+.SH LICENSE
+.B ptunnel
+is licensed under the BSD License.
+.SH AVAILABILITY
+.TP
+The ptunnel homepage is currently located here:
+http://www.cs.uit.no/~daniels/PingTunnel/
+.TP
+The freshmeat project page is located here:
+http://freshmeat.net/projects/ptunnel/
+.PP
+Please take the time to rate ptunnel if you find it useful. Thanks!
