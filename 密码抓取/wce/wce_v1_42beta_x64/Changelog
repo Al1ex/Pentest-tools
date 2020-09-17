@@ -1,0 +1,22 @@
+Changelog for Windows Credentials Editor (WCE) 64-bit 
+
+version 1.42beta:
+		Nov 11, 2013
+		-Bug fixes
+		-Improved support for unicode, cleartext passwords with special characters dumped withe -w switch
+		-Improved 'safe mode'. No code injection needed.
+
+version 1.41beta:
+               July 13, 2013
+               -Compiled with VS2010 because VS2012 breaks compatibility
+	       with Windows 2008, XP and other previous versions of Windows.
+
+version 1.4beta:
+
+		May 30, 2013
+
+	        -Several bug fixes
+
+		-Windows 8 Support
+
+		

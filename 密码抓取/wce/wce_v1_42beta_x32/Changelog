@@ -1,0 +1,29 @@
+Changelog for Windows Credentials Editor (WCE) 32-bit 
+
+
+
+version 1.42beta:
+
+		Nov 11, 2013
+
+		-Several bug fixes
+
+		-Improved support for unicode, cleartext passwords with special characters
+
+ obtained with -w switch
+
+version 1.41beta:
+		July 9, 2013
+	
+		-Recompiled with VS2010 to make the EXE file (PE) compatible with XP/2003. 1.4beta
+		was compiled with VS2012 which dropped support for XP/2003 and generates EXE PE files that are
+		not compatible with XP/2003.
+
+version 1.41beta:
+
+		May 30, 2013
+
+	        -Several bug fixes
+		-Windows 8 Support
+		-Updated getlsasrvaddr.exe 
+		
