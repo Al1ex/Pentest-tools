@@ -1,0 +1,23 @@
+﻿Build started 26-9-2016 21:36:45.
+     1>Project "C:\Users\marcs\documents\visual studio 2010\Projects\NetshHelperBeacon\NetshHelperBeacon\NetshHelperBeacon.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Creating "x64\Release\NetshHelperBeacon.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       ClCompile:
+         C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\x86_amd64\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /GL /D WIN32 /D NDEBUG /D _WINDOWS /D _USRDLL /D NETSHHELPERBEACON_EXPORTS /D InitHelperDLL /D WIN_X64 /D _WINDLL /D _UNICODE /D UNICODE /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Release\\" /Fd"x64\Release\vc100.pdb" /Gd /TP /errorReport:prompt NetshHelperBeacon.cpp
+         NetshHelperBeacon.cpp
+       Link:
+         C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\marcs\documents\visual studio 2010\Projects\NetshHelperBeacon\x64\Release\NetshHelperBeacon.dll" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"x64\Release\NetshHelperBeacon.dll.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"C:\Users\marcs\documents\visual studio 2010\Projects\NetshHelperBeacon\x64\Release\NetshHelperBeacon.pdb" /SUBSYSTEM:WINDOWS /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\marcs\documents\visual studio 2010\Projects\NetshHelperBeacon\x64\Release\NetshHelperBeacon.lib" /MACHINE:X64 /DLL x64\Release\NetshHelperBeacon.obj
+            Creating library C:\Users\marcs\documents\visual studio 2010\Projects\NetshHelperBeacon\x64\Release\NetshHelperBeacon.lib and object C:\Users\marcs\documents\visual studio 2010\Projects\NetshHelperBeacon\x64\Release\NetshHelperBeacon.exp
+         Generating code
+         Finished generating code
+         NetshHelperBeacon.vcxproj -> C:\Users\marcs\documents\visual studio 2010\Projects\NetshHelperBeacon\x64\Release\NetshHelperBeacon.dll
+       Manifest:
+         C:\Program Files\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"C:\Users\marcs\documents\visual studio 2010\Projects\NetshHelperBeacon\x64\Release\NetshHelperBeacon.dll;#2" /manifest x64\Release\NetshHelperBeacon.dll.intermediate.manifest
+       FinalizeBuildStatus:
+         Deleting file "x64\Release\NetshHelperBeacon.unsuccessfulbuild".
+         Touching "x64\Release\NetshHelperBeacon.lastbuildstate".
+     1>Done Building Project "C:\Users\marcs\documents\visual studio 2010\Projects\NetshHelperBeacon\NetshHelperBeacon\NetshHelperBeacon.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:01.56
